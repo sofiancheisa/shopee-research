@@ -1,3 +1,10 @@
+headers = {
+    "User-Agent": "Mozilla/5.0",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Connection": "keep-alive",
+    "Accept": "application/json, text/plain, */*",
+    "Referer": "https://shopee.com.my/"
+}
 headers={
     "User-Agent": "Mozilla/5.0",
     "Accept-Language": "en-US,en;q=0.9",
