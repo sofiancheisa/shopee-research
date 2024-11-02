@@ -3,17 +3,48 @@ import requests
 import pandas as pd
 from datetime import datetime
 import time
+import json
+
+def get_shopee_products(keyword):
+    url = "https://shopee.com.my/api/v4/search/search_items"
+    
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Referer': 'https://shopee.com.my/search?keyword=' + keyword,
+        'Accept': '*/*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Connection': 'keep-alive',
+        'DNT': '1'
+    }
+    
+    params = {
+        'by': 'relevancy',
+        'keyword': keyword,
+        'limit': 60,
+        'newest': 0,
+        'order': 'desc',
+        'page_type': 'search',
+        'scenario': 'PAGE_GLOBAL_SEARCH',
+        'version': 2
+    }
+
+    try:
+        response = requests.get(url, headers=headers, params=params)
+        data = response.json()
+        return data.get('items', [])
+    except:
+        return []
 
 def main():
     st.title('Shopee Product Research Tool')
 
     # Input keywords
     keywords = st.text_area('Enter keywords (one per line):', 
-        '''korean fashion
-wireless earbuds
-phone holder
-makeup brush
-smart watch''')
+        '''tiktok viral gadget
+korean style bag
+portable fan
+mini vacuum
+wireless earbuds''')
 
     # Filter settings
     col1, col2, col3 = st.columns(3)
@@ -25,81 +56,73 @@ smart watch''')
         min_rating = st.number_input('Min Rating', value=4.5)
 
     if st.button('Search Products'):
-        keywords_list = [k for k in keywords.split('\n') if k]
+        keywords_list = [k.strip() for k in keywords.split('\n') if k.strip()]
         
         progress_bar = st.progress(0)
         status_text = st.empty()
         
-        products = []
+        all_products = []
         
         # Search products
         for i, keyword in enumerate(keywords_list):
             status_text.text(f'Searching for: {keyword}')
             
-            try:
-                response = requests.get(
-                    "https://shopee.com.my/api/v4/search/search_items",
-                    params={
-                        "keyword": keyword,
-                        "limit": 50,
-                        "page_type": "search"
-                    },
-                    headers={"User-Agent": "Mozilla/5.0"}
-                )
-                
-                data = response.json()
-                
-                if 'items' in data:
-                    for item in data['items']:
-                        product = {
-                            'name': item['item_basic']['name'],
-                            'price': item['item_basic']['price'] / 100000,
-                            'sales': item['item_basic']['historical_sold'],
-                            'rating': item['item_basic']['item_rating']['rating_star'],
-                            'stock': item['item_basic']['stock'],
-                            'product_url': f"https://shopee.com.my/product/{item['item_basic']['shopid']}/{item['item_basic']['itemid']}"
-                        }
-                        products.append(product)
-                
-                progress_bar.progress((i + 1) / len(keywords_list))
-                time.sleep(1)
-                
-            except Exception as e:
-                st.error(f"Error searching {keyword}: {e}")
-                continue
-        
-        if products:
-            # Convert to DataFrame
-            df = pd.DataFrame(products)
+            items = get_shopee_products(keyword)
             
-            # Apply filters
-            filtered_df = df[
-                (df['price'].between(min_price, max_price)) &
-                (df['rating'] >= min_rating) &
-                (df['stock'] > 50)
-            ]
+            for item in items:
+                try:
+                    price = float(item.get('item_basic', {}).get('price', 0)) / 100000
+                    if min_price <= price <= max_price:
+                        product = {
+                            'keyword': keyword,
+                            'name': item.get('item_basic', {}).get('name', ''),
+                            'price': price,
+                            'sales': item.get('item_basic', {}).get('historical_sold', 0),
+                            'rating': float(item.get('item_basic', {}).get('item_rating', {}).get('rating_star', 0)),
+                            'stock': item.get('item_basic', {}).get('stock', 0),
+                            'shop_location': item.get('item_basic', {}).get('shop_location', ''),
+                            'shopid': item.get('item_basic', {}).get('shopid', ''),
+                            'itemid': item.get('item_basic', {}).get('itemid', '')
+                        }
+                        
+                        if product['rating'] >= min_rating:
+                            product['product_url'] = f"https://shopee.com.my/product/{product['shopid']}/{product['itemid']}"
+                            all_products.append(product)
+                except:
+                    continue
+            
+            progress_bar.progress((i + 1) / len(keywords_list))
+            time.sleep(1)
+        
+        if all_products:
+            # Convert to DataFrame
+            df = pd.DataFrame(all_products)
             
             # Calculate potential
-            filtered_df['daily_sales'] = filtered_df['sales'] / 30
-            filtered_df['potential_commission'] = filtered_df['price'] * 0.20
-            filtered_df['daily_potential'] = filtered_df['daily_sales'] * filtered_df['potential_commission']
+            df['daily_sales'] = df['sales'] / 30
+            df['potential_commission'] = df['price'] * 0.20
+            df['daily_potential'] = df['daily_sales'] * df['potential_commission']
             
             # Sort and display
-            filtered_df = filtered_df.sort_values('daily_potential', ascending=False)
+            df = df.sort_values('daily_potential', ascending=False)
             
-            st.write('### Top Products Found:')
-            st.dataframe(filtered_df)
+            # Format numbers
+            df['price'] = df['price'].round(2)
+            df['daily_potential'] = df['daily_potential'].round(2)
+            
+            st.write(f'### Found {len(df)} Products:')
+            st.dataframe(df)
             
             # Download button
-            csv = filtered_df.to_csv(index=False)
+            csv = df.to_csv(index=False)
             st.download_button(
-                label="Download Results",
+                label="Download Results as CSV",
                 data=csv,
                 file_name=f"shopee_research_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                 mime="text/csv"
             )
         else:
-            st.warning('No products found matching your criteria.')
+            st.warning('No products found. Try different keywords or adjust your filters.')
 
 if __name__ == '__main__':
     main()
