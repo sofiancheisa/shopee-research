@@ -60,27 +60,4 @@ if st.button('Search Products'):
                         'stock' in item['item_basic']):
                         
                         product = {
-                            'name': item['item_basic']['name'],
-                            'price': item['item_basic']['price'] / 100000,
-                            'sales': item['item_basic']['historical_sold'],
-                            'rating': item['item_basic']['item_rating']['rating_star'],
-                            'stock': item['item_basic']['stock'],
-                            'product_url': f"https://shopee.com.my/product/{item['item_basic']['shopid']}/{item['item_basic']['itemid']}"
-                        }
-                        products.append(product)
-                    else:
-                        st.write(f"Missing expected keys in item: {item}")
-            
-            progress_bar.progress((i + 1) / len(keywords_list))
-            time.sleep(1)
-            
-        except Exception as e:
-            st.error(f"Error searching {keyword}: {e}")
-            continue
-    
-    # Convert to DataFrame if products list is not empty
-    if products:
-        df = pd.DataFrame(products)
-        
-        # Apply filters if df is not empty
-        if not df.em
+                   
