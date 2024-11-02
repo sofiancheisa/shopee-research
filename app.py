@@ -47,6 +47,8 @@ if st.button('Search Products'):
             )
             
             data = response.json()
+            st.write(data)  # Ini akan paparkan data dari Shopee
+
             
             if 'items' in data:
                 for item in data['items']:
