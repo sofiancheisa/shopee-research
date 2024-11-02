@@ -46,4 +46,41 @@ if st.button('Search Products'):
                 headers={"User-Agent": "Mozilla/5.0"}
             )
             
-            data
+            data = response.json()
+            
+            if 'items' in data:
+                for item in data['items']:
+                    # Ensure item_basic has required keys
+                    if ('item_basic' in item and
+                        'name' in item['item_basic'] and
+                        'price' in item['item_basic'] and
+                        'historical_sold' in item['item_basic'] and
+                        'item_rating' in item['item_basic'] and
+                        'rating_star' in item['item_basic']['item_rating'] and
+                        'stock' in item['item_basic']):
+                        
+                        product = {
+                            'name': item['item_basic']['name'],
+                            'price': item['item_basic']['price'] / 100000,
+                            'sales': item['item_basic']['historical_sold'],
+                            'rating': item['item_basic']['item_rating']['rating_star'],
+                            'stock': item['item_basic']['stock'],
+                            'product_url': f"https://shopee.com.my/product/{item['item_basic']['shopid']}/{item['item_basic']['itemid']}"
+                        }
+                        products.append(product)
+                    else:
+                        st.write(f"Missing expected keys in item: {item}")
+            
+            progress_bar.progress((i + 1) / len(keywords_list))
+            time.sleep(1)
+            
+        except Exception as e:
+            st.error(f"Error searching {keyword}: {e}")
+            continue
+    
+    # Convert to DataFrame if products list is not empty
+    if products:
+        df = pd.DataFrame(products)
+        
+        # Apply filters if df is not empty
+        if not df.em
