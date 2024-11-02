@@ -46,18 +46,4 @@ if st.button('Search Products'):
                 headers={"User-Agent": "Mozilla/5.0"}
             )
             
-            data = response.json()
-            
-            if 'items' in data:
-                for item in data['items']:
-                    # Ensure item_basic has required keys
-                    if ('item_basic' in item and
-                        'name' in item['item_basic'] and
-                        'price' in item['item_basic'] and
-                        'historical_sold' in item['item_basic'] and
-                        'item_rating' in item['item_basic'] and
-                        'rating_star' in item['item_basic']['item_rating'] and
-                        'stock' in item['item_basic']):
-                        
-                        product = {
-                            'name': item['item_basic']['na
+            data
